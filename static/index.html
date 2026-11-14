@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Join Channels</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:22px;background:#101a16;color:#fff;font-family:Arial,sans-serif}
+.wrap{max-width:480px;margin:auto}.panel{background:#1b2b23;border-radius:20px;padding:22px;box-shadow:0 8px 30px #0005}
+h2{margin:0 0 8px;text-align:center}p{color:#c9d7ce;text-align:center;line-height:1.5}
+.join{display:block;width:100%;padding:16px;margin:12px 0;border:0;border-radius:12px;background:#16a34a;color:white;
+font-size:16px;font-weight:800;text-align:center;text-decoration:none;cursor:pointer}
+.check{background:#087fdb;margin-top:20px}.status{text-align:center;min-height:24px;margin-top:14px;color:#d9f99d}
+.small{font-size:12px;color:#a8b9ad}
+</style></head>
+<body><div class="wrap"><div class="panel">
+<h2>Join All Channels</h2><p>Join every channel below, then tap <b>CHECK JOINED</b> to unlock.</p>
+<div id="channels"></div>
+<button class="join check" onclick="checkJoined()">CHECK JOINED</button>
+<div id="status" class="status"></div>
+<p class="small">Open this page inside Telegram using the bot's app button.</p>
+</div></div>
+<script>
+const tg = window.Telegram?.WebApp;
+tg?.ready(); tg?.expand();
+async function loadChannels(){
+ const r=await fetch('/api/channels'); const list=await r.json();
+ const root=document.getElementById('channels');
+ list.forEach((c,i)=>{
+   const a=document.createElement('a'); a.className='join'; a.textContent='JOIN '+c.title.toUpperCase();
+   a.href=c.join_url; a.target='_blank'; root.appendChild(a);
+ });
+}
+async function checkJoined(){
+ const status=document.getElementById('status');
+ if(!tg?.initData){status.textContent='Please open this Mini App from Telegram.';return;}
+ status.textContent='Checking membership…';
+ try{
+  const r=await fetch('/api/check',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({initData:tg.initData})});
+  const data=await r.json();
+  if(data.ok){status.textContent='✅ All channels joined! You are unlocked.';tg?.HapticFeedback?.notificationOccurred('success');}
+  else if(data.missing){status.textContent='Not joined: '+data.missing.join(', ');tg?.HapticFeedback?.notificationOccurred('error');}
+  else status.textContent=data.error||'Could not verify. Try again.';
+ }catch(e){status.textContent='Connection error. Please try again.';}
+}
+loadChannels();
+</script></body></html>
